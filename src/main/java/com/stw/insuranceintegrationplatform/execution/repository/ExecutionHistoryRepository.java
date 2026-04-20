@@ -14,4 +14,14 @@ public interface ExecutionHistoryRepository extends JpaRepository<ExecutionHisto
     List<ExecutionHistoryEntity> findByExecutionStatusOrderByStartedAtDesc(ExecutionStatus executionStatus);
 
     List<ExecutionHistoryEntity> findByStartedAtBetween(LocalDateTime from, LocalDateTime to);
+
+    long countByStartedAtBetween(LocalDateTime from, LocalDateTime to);
+
+    long countByStartedAtBetweenAndExecutionStatus(LocalDateTime from, LocalDateTime to, ExecutionStatus executionStatus);
+
+    List<ExecutionHistoryEntity> findByExecutionStatusAndStartedAtBetweenOrderByStartedAtDesc(
+            ExecutionStatus executionStatus,
+            LocalDateTime from,
+            LocalDateTime to
+    );
 }

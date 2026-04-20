@@ -77,7 +77,7 @@ public class ExecutionService {
             String sortBy,
             Sort.Direction direction
     ) {
-        Specification<ExecutionHistoryEntity> spec = Specification.where(null);
+        Specification<ExecutionHistoryEntity> spec = Specification.unrestricted();
 
         if (from != null) {
             spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("startedAt"), from));
@@ -120,6 +120,26 @@ public class ExecutionService {
         );
     }
 
+    public long totalBetween(LocalDateTime from, LocalDateTime to) {
+        return historyRepository.countByStartedAtBetween(from, to);
+    }
+
+    public long successBetween(LocalDateTime from, LocalDateTime to) {
+        return historyRepository.countByStartedAtBetweenAndExecutionStatus(from, to, ExecutionStatus.SUCCESS);
+    }
+
+    public long failureBetween(LocalDateTime from, LocalDateTime to) {
+        return historyRepository.countByStartedAtBetweenAndExecutionStatus(from, to, ExecutionStatus.FAILED);
+    }
+
+    public List<ExecutionHistoryResponse> recentFailuresBetween(LocalDateTime from, LocalDateTime to, int limit) {
+        return historyRepository.findByExecutionStatusAndStartedAtBetweenOrderByStartedAtDesc(ExecutionStatus.FAILED, from, to)
+                .stream()
+                .limit(Math.max(1, limit))
+                .map(this::toResponse)
+                .toList();
+    }
+
     private ExecutionHistoryResponse doExecute(
             InterfaceDefinitionEntity definition,
             ExecutionTriggerType triggerType,
@@ -137,44 +157,44 @@ public class ExecutionService {
 
         try {
             ExecutionHistoryEntity history = new ExecutionHistoryEntity();
-        history.setInterfaceCode(definition.getInterfaceCode());
-        history.setTriggerType(triggerType);
-        history.setReprocessed(reprocessed);
-        history.setStartedAt(LocalDateTime.now());
-        history.setRequestSummary(requestSummary == null ? "" : requestSummary);
+            history.setInterfaceCode(definition.getInterfaceCode());
+            history.setTriggerType(triggerType);
+            history.setReprocessed(reprocessed);
+            history.setStartedAt(LocalDateTime.now());
+            history.setRequestSummary(requestSummary == null ? "" : requestSummary);
 
-        int maxAttempts = triggerType == ExecutionTriggerType.TEST ? 1 : Math.max(1, definition.getRetryCount() + 1);
-        int attempts = 0;
-        ExecutionResult result = null;
+            int maxAttempts = triggerType == ExecutionTriggerType.TEST ? 1 : Math.max(1, definition.getRetryCount() + 1);
+            int attempts = 0;
+            ExecutionResult result = null;
 
-        for (int i = 1; i <= maxAttempts; i++) {
-            attempts = i;
-            result = executorRegistry.find(definition.getProtocolType())
-                    .execute(definition, requestSummary, triggerType == ExecutionTriggerType.TEST);
-            if (result.isSuccess()) {
-                break;
+            for (int i = 1; i <= maxAttempts; i++) {
+                attempts = i;
+                result = executorRegistry.find(definition.getProtocolType())
+                        .execute(definition, requestSummary, triggerType == ExecutionTriggerType.TEST);
+                if (result.isSuccess()) {
+                    break;
+                }
             }
-        }
 
-        if (result == null) {
-            throw new IllegalStateException("실행 결과가 생성되지 않았습니다.");
-        }
+            if (result == null) {
+                throw new IllegalStateException("실행 결과가 생성되지 않았습니다.");
+            }
 
-        String errorMessage = result.errorMessage();
-        if (!result.isSuccess() && errorMessage != null && !errorMessage.isBlank()) {
-            errorMessage = errorMessage + " (attempt " + attempts + "/" + maxAttempts + ")";
-        }
+            String errorMessage = result.errorMessage();
+            if (!result.isSuccess() && errorMessage != null && !errorMessage.isBlank()) {
+                errorMessage = errorMessage + " (attempt " + attempts + "/" + maxAttempts + ")";
+            }
 
-        history.complete(
-                LocalDateTime.now(),
-                result.executionStatus(),
-                result.processedCount(),
-                attempts,
-                errorMessage,
-                result.responseSummary()
-        );
+            history.complete(
+                    LocalDateTime.now(),
+                    result.executionStatus(),
+                    result.processedCount(),
+                    attempts,
+                    errorMessage,
+                    result.responseSummary()
+            );
 
-        ExecutionHistoryEntity saved = historyRepository.save(history);
+            ExecutionHistoryEntity saved = historyRepository.save(history);
 
             definition.applyExecutionResult(result.isSuccess(), saved.getEndedAt());
             interfaceService.save(definition);
@@ -203,18 +223,14 @@ public class ExecutionService {
     }
 
     public long totalToday() {
-        return historyRepository.findByStartedAtBetween(LocalDate.now().atStartOfDay(), LocalDate.now().plusDays(1).atStartOfDay()).size();
+        return totalBetween(LocalDate.now().atStartOfDay(), LocalDate.now().plusDays(1).atStartOfDay());
     }
 
     public long successToday() {
-        return historyRepository.findByStartedAtBetween(LocalDate.now().atStartOfDay(), LocalDate.now().plusDays(1).atStartOfDay()).stream()
-                .filter(h -> h.getExecutionStatus() == ExecutionStatus.SUCCESS)
-                .count();
+        return successBetween(LocalDate.now().atStartOfDay(), LocalDate.now().plusDays(1).atStartOfDay());
     }
 
     public long failureToday() {
-        return historyRepository.findByStartedAtBetween(LocalDate.now().atStartOfDay(), LocalDate.now().plusDays(1).atStartOfDay()).stream()
-                .filter(h -> h.getExecutionStatus() == ExecutionStatus.FAILED)
-                .count();
+        return failureBetween(LocalDate.now().atStartOfDay(), LocalDate.now().plusDays(1).atStartOfDay());
     }
 }

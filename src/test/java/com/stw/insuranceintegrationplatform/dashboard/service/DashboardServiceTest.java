@@ -1,5 +1,6 @@
 package com.stw.insuranceintegrationplatform.dashboard.service;
 
+import com.stw.insuranceintegrationplatform.dashboard.presentation.DashboardPeriod;
 import com.stw.insuranceintegrationplatform.dashboard.presentation.DashboardResponse;
 import com.stw.insuranceintegrationplatform.execution.service.ExecutionService;
 import com.stw.insuranceintegrationplatform.interfaceconfig.entity.InterfaceHealthStatus;
@@ -12,9 +13,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -29,21 +33,45 @@ class DashboardServiceTest {
     private DashboardService dashboardService;
 
     @Test
-    void shouldReturnDashboardMetrics() {
-        when(executionService.totalToday()).thenReturn(2L);
-        when(executionService.successToday()).thenReturn(1L);
-        when(executionService.failureToday()).thenReturn(1L);
-        when(executionService.listHistories(true)).thenReturn(List.of());
+    void shouldReturnDashboardMetricsForToday() {
+        when(executionService.totalBetween(any(), any())).thenReturn(2L);
+        when(executionService.successBetween(any(), any())).thenReturn(1L);
+        when(executionService.failureBetween(any(), any())).thenReturn(1L);
+        when(executionService.recentFailuresBetween(any(), any(), any(Integer.class))).thenReturn(List.of());
 
         when(interfaceService.list()).thenReturn(List.of(
                 new InterfaceSummaryResponse("IF-1", "name1", "기관1", ProtocolType.REST, InterfaceHealthStatus.NORMAL, null, true, true),
                 new InterfaceSummaryResponse("IF-2", "name2", "기관2", ProtocolType.BATCH, InterfaceHealthStatus.FAILED, null, false, true)
         ));
 
-        DashboardResponse response = dashboardService.getDashboard();
+        DashboardResponse response = dashboardService.getDashboard(DashboardPeriod.TODAY, null, null);
 
-        assertEquals(2L, response.totalExecutionsToday());
+        assertEquals(DashboardPeriod.TODAY, response.period());
+        assertEquals(2L, response.totalExecutions());
         assertEquals(1L, response.failedInterfaceCount());
         assertEquals(2, response.protocolStatus().size());
+    }
+
+    @Test
+    void shouldFailWhenCustomPeriodWithoutRange() {
+        assertThrows(IllegalArgumentException.class,
+                () -> dashboardService.getDashboard(DashboardPeriod.CUSTOM, null, null));
+    }
+
+    @Test
+    void shouldAcceptCustomPeriodWithRange() {
+        when(executionService.totalBetween(any(), any())).thenReturn(0L);
+        when(executionService.successBetween(any(), any())).thenReturn(0L);
+        when(executionService.failureBetween(any(), any())).thenReturn(0L);
+        when(executionService.recentFailuresBetween(any(), any(), any(Integer.class))).thenReturn(List.of());
+        when(interfaceService.list()).thenReturn(List.of());
+
+        LocalDateTime from = LocalDateTime.now().minusDays(2);
+        LocalDateTime to = LocalDateTime.now();
+        DashboardResponse response = dashboardService.getDashboard(DashboardPeriod.CUSTOM, from, to);
+
+        assertEquals(DashboardPeriod.CUSTOM, response.period());
+        assertEquals(from, response.from());
+        assertEquals(to, response.to());
     }
 }
