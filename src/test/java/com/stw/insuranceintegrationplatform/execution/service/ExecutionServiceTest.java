@@ -14,8 +14,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -60,6 +64,36 @@ class ExecutionServiceTest {
 
         assertEquals(ExecutionStatus.SUCCESS, response.executionStatus());
         assertEquals(1L, response.historyId());
+    }
+
+
+    @Test
+    void shouldSearchHistoriesWithPaging() {
+        ExecutionHistoryEntity row = new ExecutionHistoryEntity();
+        row.setHistoryId(10L);
+        row.setInterfaceCode("IF-REST-001");
+        row.setExecutionStatus(ExecutionStatus.SUCCESS);
+        row.setStartedAt(LocalDateTime.now());
+        row.setAttemptCount(1);
+
+        when(executionHistoryRepository.findAll(any(org.springframework.data.jpa.domain.Specification.class), any(org.springframework.data.domain.Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(row), PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "startedAt")), 1));
+
+        var result = executionService.searchHistories(
+                null,
+                null,
+                "IF-REST-001",
+                ExecutionStatus.SUCCESS,
+                null,
+                null,
+                0,
+                20,
+                "startedAt",
+                Sort.Direction.DESC
+        );
+
+        assertEquals(1, result.content().size());
+        assertEquals(1L, result.totalElements());
     }
 
     @Test

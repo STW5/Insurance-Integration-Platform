@@ -3,10 +3,16 @@ package com.stw.insuranceintegrationplatform.execution.service;
 import com.stw.insuranceintegrationplatform.execution.entity.ExecutionHistoryEntity;
 import com.stw.insuranceintegrationplatform.execution.entity.ExecutionStatus;
 import com.stw.insuranceintegrationplatform.execution.entity.ExecutionTriggerType;
+import com.stw.insuranceintegrationplatform.execution.presentation.ExecutionHistoryPageResponse;
 import com.stw.insuranceintegrationplatform.execution.presentation.ExecutionHistoryResponse;
 import com.stw.insuranceintegrationplatform.execution.repository.ExecutionHistoryRepository;
 import com.stw.insuranceintegrationplatform.interfaceconfig.entity.InterfaceDefinitionEntity;
 import com.stw.insuranceintegrationplatform.interfaceconfig.service.InterfaceService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -54,6 +60,61 @@ public class ExecutionService {
                 ? historyRepository.findByExecutionStatusOrderByStartedAtDesc(ExecutionStatus.FAILED)
                 : historyRepository.findAllByOrderByStartedAtDesc();
         return source.stream().map(this::toResponse).toList();
+    }
+
+    public ExecutionHistoryPageResponse searchHistories(
+            LocalDateTime from,
+            LocalDateTime to,
+            String interfaceCode,
+            ExecutionStatus executionStatus,
+            ExecutionTriggerType triggerType,
+            Boolean reprocessed,
+            int page,
+            int size,
+            String sortBy,
+            Sort.Direction direction
+    ) {
+        Specification<ExecutionHistoryEntity> spec = Specification.where(null);
+
+        if (from != null) {
+            spec = spec.and((root, query, cb) -> cb.greaterThanOrEqualTo(root.get("startedAt"), from));
+        }
+        if (to != null) {
+            spec = spec.and((root, query, cb) -> cb.lessThanOrEqualTo(root.get("startedAt"), to));
+        }
+        if (interfaceCode != null && !interfaceCode.isBlank()) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("interfaceCode"), interfaceCode));
+        }
+        if (executionStatus != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("executionStatus"), executionStatus));
+        }
+        if (triggerType != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("triggerType"), triggerType));
+        }
+        if (reprocessed != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("reprocessed"), reprocessed));
+        }
+
+        String validSort = switch (sortBy) {
+            case "startedAt", "endedAt", "historyId", "executionStatus", "interfaceCode" -> sortBy;
+            default -> "startedAt";
+        };
+
+        Pageable pageable = PageRequest.of(
+                Math.max(page, 0),
+                Math.min(Math.max(size, 1), 200),
+                Sort.by(direction, validSort)
+        );
+
+        Page<ExecutionHistoryEntity> result = historyRepository.findAll(spec, pageable);
+        return new ExecutionHistoryPageResponse(
+                result.getContent().stream().map(this::toResponse).toList(),
+                result.getNumber(),
+                result.getSize(),
+                result.getTotalElements(),
+                result.getTotalPages(),
+                result.isLast()
+        );
     }
 
     private ExecutionHistoryResponse doExecute(

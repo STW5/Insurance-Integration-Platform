@@ -66,3 +66,5 @@
 - 스케줄 자동 실행기 추가 (`@Scheduled`, schedule format: manual/fixed:Nm/every-Nm/daily-HH:mm/cron:expr)
 - 스케줄 차기 실행 시각(`nextScheduledAt`) 관리
 - 비활성 인터페이스 수동/재처리 실행 차단
+
+- 실행 이력 조건 검색/기간 필터/페이지네이션 API 추가 (`GET /api/executions/histories`)
