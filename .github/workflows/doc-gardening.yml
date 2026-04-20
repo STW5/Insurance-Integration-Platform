@@ -1,0 +1,23 @@
+name: doc-gardening
+
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  garden-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run doc gardening (non-strict)
+        run: bash scripts/doc-gardening.sh
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: doc-gardening-report
+          path: docs/generated/doc-gardening-report.md
+          if-no-files-found: error

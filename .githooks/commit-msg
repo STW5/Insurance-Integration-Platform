@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+msg_file="$1"
+msg="$(cat "$msg_file")"
+title="$(head -n1 "$msg_file")"
+
+if echo "$msg" | grep -Eiq 'with claude|co-authored-by'; then
+  echo "[commit-msg] 금지 문구 포함"
+  exit 1
+fi
+
+if ! echo "$title" | grep -Eq '[가-힣]'; then
+  echo "[commit-msg] 첫 줄(제목)에 한국어가 필요합니다."
+  exit 1
+fi
+
+echo "[commit-msg] 통과"

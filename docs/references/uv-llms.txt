@@ -1,0 +1,2 @@
+uv reference placeholder for LLM-friendly consumption.
+(원문 링크/버전/날짜를 함께 기록)

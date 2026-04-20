@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "[pre-commit] 시작"
+
+if git diff --cached --name-only 2>/dev/null | xargs -I{} sh -c "test -f '{}' && grep -nE '(AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----|password\s*=\s*[^\s]+|api[_-]?key\s*[:=]\s*[^\s]+|token\s*[:=]\s*[^\s]+)' '{}' || true" | grep -q .; then
+  echo "[pre-commit] 시크릿 의심 패턴 탐지: 커밋 중단"
+  exit 1
+fi
+
+bash scripts/doc-lint.sh
+bash .codex/scripts/drift-check.sh --staged || {
+  code=$?
+  if [ "$code" -eq 2 ]; then
+    echo "[pre-commit] 문서 드리프트 경고: staged 변경에 문서 반영 필요"
+  else
+    exit "$code"
+  fi
+}
+bash scripts/doc-gardening.sh --strict
+
+if [ -x "./gradlew" ]; then
+  ./gradlew test -q
+fi
+
+echo "[pre-commit] 통과"
