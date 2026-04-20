@@ -5,13 +5,21 @@ msg_file="$1"
 msg="$(cat "$msg_file")"
 title="$(head -n1 "$msg_file")"
 
-if echo "$msg" | grep -Eiq 'with claude|co-authored-by'; then
-  echo "[commit-msg] 금지 문구 포함"
+# 금지 문구
+if echo "$msg" | grep -Eiq 'with codex|with claude|co-authored-by|phase [0-9]+'; then
+  echo "[commit-msg] 금지 문구 포함(with codex / with claude / Co-Authored-By / Phase N)"
   exit 1
 fi
 
+# 형식: <type>: <한국어 설명>
+if ! echo "$title" | grep -Eq '^(feat|fix|refactor|chore|docs|test|perf|ci|build): .+'; then
+  echo "[commit-msg] 형식 오류: <type>: <설명> 형식을 사용하세요"
+  exit 1
+fi
+
+# 한국어 포함 강제
 if ! echo "$title" | grep -Eq '[가-힣]'; then
-  echo "[commit-msg] 첫 줄(제목)에 한국어가 필요합니다."
+  echo "[commit-msg] 제목에 한국어가 필요합니다"
   exit 1
 fi
 

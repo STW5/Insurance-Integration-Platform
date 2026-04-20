@@ -37,6 +37,7 @@
 ## Knowledge Map
 - 아키텍처 맵: `ARCHITECTURE.md`
 - 규칙 인덱스: `docs/rules/README.md`
+- 커밋/브랜치 컨벤션: `docs/rules/conventions.md`
 - 설계 문서: `docs/design-docs/`
 - 실행 계획: `docs/exec-plans/`
 - 제품 스펙: `docs/product-specs/`
