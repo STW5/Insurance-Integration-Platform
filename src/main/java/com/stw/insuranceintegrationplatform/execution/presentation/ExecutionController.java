@@ -70,7 +70,11 @@ public class ExecutionController {
     }
 
     @PostMapping("/histories/{historyId}/reprocess")
-    public ResponseEntity<ExecutionHistoryResponse> reprocess(@PathVariable long historyId) {
-        return ResponseEntity.ok(executionService.reprocess(historyId));
+    public ResponseEntity<ExecutionHistoryResponse> reprocess(
+            @PathVariable long historyId,
+            @RequestBody(required = false) ReprocessExecutionRequest request
+    ) {
+        String requestSummary = request != null ? request.requestSummary() : null;
+        return ResponseEntity.ok(executionService.reprocess(historyId, requestSummary));
     }
 }

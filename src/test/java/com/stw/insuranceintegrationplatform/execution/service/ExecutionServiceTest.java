@@ -120,10 +120,36 @@ class ExecutionServiceTest {
             return e;
         });
 
-        ExecutionHistoryResponse response = executionService.reprocess(7L);
+        ExecutionHistoryResponse response = executionService.reprocess(7L, null);
 
         assertTrue(response.reprocessed());
         assertEquals("IF-BATCH-001", response.interfaceCode());
+    }
+
+    @Test
+    void shouldUseOverrideSummaryWhenReprocessRequested() {
+        InterfaceDefinitionEntity def = sampleInterface("IF-BATCH-777", ProtocolType.BATCH, "batch://fail");
+        ExecutionHistoryEntity failed = new ExecutionHistoryEntity();
+        failed.setHistoryId(77L);
+        failed.setInterfaceCode("IF-BATCH-777");
+        failed.setExecutionStatus(ExecutionStatus.FAILED);
+        failed.setRequestSummary("old-summary");
+
+        when(executionHistoryRepository.findById(77L)).thenReturn(Optional.of(failed));
+        when(executionLockManager.tryAcquire("IF-BATCH-777")).thenReturn(true);
+        when(interfaceService.getByCode("IF-BATCH-777")).thenReturn(def);
+        when(executorRegistry.find(ProtocolType.BATCH)).thenReturn(interfaceExecutor);
+        when(interfaceExecutor.execute(any(), any(), any(Boolean.class)))
+                .thenReturn(new ExecutionResult(ExecutionStatus.SUCCESS, 1, null, "ok"));
+        when(executionHistoryRepository.save(any())).thenAnswer(invocation -> {
+            ExecutionHistoryEntity e = invocation.getArgument(0);
+            e.setHistoryId(78L);
+            return e;
+        });
+
+        ExecutionHistoryResponse response = executionService.reprocess(77L, "manual-override");
+
+        assertEquals("manual-override", response.requestSummary());
     }
 
     @Test

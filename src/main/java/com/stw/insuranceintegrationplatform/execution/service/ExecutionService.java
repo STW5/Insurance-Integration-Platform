@@ -49,13 +49,14 @@ public class ExecutionService {
         return doExecute(definition, ExecutionTriggerType.SCHEDULED, false, requestSummary);
     }
 
-    public ExecutionHistoryResponse reprocess(long failedHistoryId) {
+    public ExecutionHistoryResponse reprocess(long failedHistoryId, String requestSummaryOverride) {
         ExecutionHistoryEntity failedHistory = historyRepository.findById(failedHistoryId)
                 .filter(h -> h.getExecutionStatus() == ExecutionStatus.FAILED)
                 .orElseThrow(() -> new IllegalArgumentException("실패 이력을 찾을 수 없습니다: " + failedHistoryId));
 
         InterfaceDefinitionEntity definition = interfaceService.getByCode(failedHistory.getInterfaceCode());
-        return doExecute(definition, ExecutionTriggerType.REPROCESS, true, "재처리 from historyId=" + failedHistoryId);
+        String requestSummary = resolveReprocessRequestSummary(failedHistory, failedHistoryId, requestSummaryOverride);
+        return doExecute(definition, ExecutionTriggerType.REPROCESS, true, requestSummary);
     }
 
     public ExecutionHistoryResponse getHistory(long historyId) {
@@ -233,6 +234,21 @@ public class ExecutionService {
                 history.getRequestSummary(),
                 history.getResponseSummary()
         );
+    }
+
+    private String resolveReprocessRequestSummary(
+            ExecutionHistoryEntity failedHistory,
+            long failedHistoryId,
+            String requestSummaryOverride
+    ) {
+        if (requestSummaryOverride != null && !requestSummaryOverride.isBlank()) {
+            return requestSummaryOverride;
+        }
+        String originalSummary = failedHistory.getRequestSummary();
+        if (originalSummary != null && !originalSummary.isBlank()) {
+            return originalSummary + " | reprocessFrom=" + failedHistoryId;
+        }
+        return "재처리 from historyId=" + failedHistoryId;
     }
 
     public long totalToday() {
