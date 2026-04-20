@@ -24,15 +24,18 @@ public class ExecutionService {
     private final InterfaceService interfaceService;
     private final ExecutionHistoryRepository historyRepository;
     private final ExecutorRegistry executorRegistry;
+    private final ExecutionLockManager executionLockManager;
 
     public ExecutionService(
             InterfaceService interfaceService,
             ExecutionHistoryRepository historyRepository,
-            ExecutorRegistry executorRegistry
+            ExecutorRegistry executorRegistry,
+            ExecutionLockManager executionLockManager
     ) {
         this.interfaceService = interfaceService;
         this.historyRepository = historyRepository;
         this.executorRegistry = executorRegistry;
+        this.executionLockManager = executionLockManager;
     }
 
     public ExecutionHistoryResponse execute(String interfaceCode, boolean testExecution, String requestSummary) {
@@ -127,7 +130,13 @@ public class ExecutionService {
             throw new IllegalArgumentException("비활성화된 인터페이스는 실행할 수 없습니다: " + definition.getInterfaceCode());
         }
 
-        ExecutionHistoryEntity history = new ExecutionHistoryEntity();
+        boolean acquired = executionLockManager.tryAcquire(definition.getInterfaceCode());
+        if (!acquired) {
+            throw new IllegalStateException("이미 실행 중인 인터페이스입니다: " + definition.getInterfaceCode());
+        }
+
+        try {
+            ExecutionHistoryEntity history = new ExecutionHistoryEntity();
         history.setInterfaceCode(definition.getInterfaceCode());
         history.setTriggerType(triggerType);
         history.setReprocessed(reprocessed);
@@ -167,10 +176,13 @@ public class ExecutionService {
 
         ExecutionHistoryEntity saved = historyRepository.save(history);
 
-        definition.applyExecutionResult(result.isSuccess(), saved.getEndedAt());
-        interfaceService.save(definition);
+            definition.applyExecutionResult(result.isSuccess(), saved.getEndedAt());
+            interfaceService.save(definition);
 
-        return toResponse(saved);
+            return toResponse(saved);
+        } finally {
+            executionLockManager.release(definition.getInterfaceCode());
+        }
     }
 
     private ExecutionHistoryResponse toResponse(ExecutionHistoryEntity history) {

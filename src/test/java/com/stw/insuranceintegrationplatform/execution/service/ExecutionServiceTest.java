@@ -38,12 +38,14 @@ class ExecutionServiceTest {
     private ExecutorRegistry executorRegistry;
     @Mock
     private InterfaceExecutor interfaceExecutor;
+    @Mock
+    private ExecutionLockManager executionLockManager;
 
     private ExecutionService executionService;
 
     @BeforeEach
     void setUp() {
-        executionService = new ExecutionService(interfaceService, executionHistoryRepository, executorRegistry);
+        executionService = new ExecutionService(interfaceService, executionHistoryRepository, executorRegistry, executionLockManager);
     }
 
     @Test
@@ -51,6 +53,7 @@ class ExecutionServiceTest {
         InterfaceDefinitionEntity def = sampleInterface("IF-REST-001", ProtocolType.REST, "mock://success");
 
         when(interfaceService.getByCode("IF-REST-001")).thenReturn(def);
+        when(executionLockManager.tryAcquire("IF-REST-001")).thenReturn(true);
         when(executorRegistry.find(ProtocolType.REST)).thenReturn(interfaceExecutor);
         when(interfaceExecutor.execute(any(), any(), any(Boolean.class)))
                 .thenReturn(new ExecutionResult(ExecutionStatus.SUCCESS, 1, null, "ok"));
@@ -105,6 +108,7 @@ class ExecutionServiceTest {
         failed.setExecutionStatus(ExecutionStatus.FAILED);
 
         when(executionHistoryRepository.findById(7L)).thenReturn(Optional.of(failed));
+        when(executionLockManager.tryAcquire("IF-BATCH-001")).thenReturn(true);
         when(interfaceService.getByCode("IF-BATCH-001")).thenReturn(def);
         when(executorRegistry.find(ProtocolType.BATCH)).thenReturn(interfaceExecutor);
         when(interfaceExecutor.execute(any(), any(), any(Boolean.class)))
@@ -119,6 +123,20 @@ class ExecutionServiceTest {
 
         assertTrue(response.reprocessed());
         assertEquals("IF-BATCH-001", response.interfaceCode());
+    }
+
+
+
+    @Test
+    void shouldBlockWhenInterfaceAlreadyRunning() {
+        InterfaceDefinitionEntity def = sampleInterface("IF-REST-009", ProtocolType.REST, "mock://success");
+        when(interfaceService.getByCode("IF-REST-009")).thenReturn(def);
+        when(executionLockManager.tryAcquire("IF-REST-009")).thenReturn(false);
+
+        var ex = org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> executionService.execute("IF-REST-009", false, "run"));
+
+        assertTrue(ex.getMessage().contains("이미 실행 중"));
     }
 
     private InterfaceDefinitionEntity sampleInterface(String code, ProtocolType protocolType, String endpoint) {
