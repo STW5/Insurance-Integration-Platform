@@ -55,13 +55,23 @@ public class InterfaceDefinitionEntity {
     @Column(name = "last_execution_success", nullable = false)
     private boolean lastExecutionSuccess;
 
+    @Column(name = "next_scheduled_at")
+    private LocalDateTime nextScheduledAt;
+
     public InterfaceDefinitionEntity() {
     }
 
     public void applyExecutionResult(boolean success, LocalDateTime executedAt) {
         this.lastExecutionSuccess = success;
         this.lastExecutedAt = executedAt;
-        this.healthStatus = success ? InterfaceHealthStatus.NORMAL : InterfaceHealthStatus.FAILED;
+        if (this.active) {
+            this.healthStatus = success ? InterfaceHealthStatus.NORMAL : InterfaceHealthStatus.FAILED;
+        }
+    }
+
+    public void applyActivation(boolean active) {
+        this.active = active;
+        this.healthStatus = active ? InterfaceHealthStatus.NORMAL : InterfaceHealthStatus.STOPPED;
     }
 
     public String getInterfaceCode() { return interfaceCode; }
@@ -90,4 +100,6 @@ public class InterfaceDefinitionEntity {
     public void setLastExecutedAt(LocalDateTime lastExecutedAt) { this.lastExecutedAt = lastExecutedAt; }
     public boolean isLastExecutionSuccess() { return lastExecutionSuccess; }
     public void setLastExecutionSuccess(boolean lastExecutionSuccess) { this.lastExecutionSuccess = lastExecutionSuccess; }
+    public LocalDateTime getNextScheduledAt() { return nextScheduledAt; }
+    public void setNextScheduledAt(LocalDateTime nextScheduledAt) { this.nextScheduledAt = nextScheduledAt; }
 }

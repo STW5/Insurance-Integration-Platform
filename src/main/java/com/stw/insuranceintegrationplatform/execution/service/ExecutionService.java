@@ -31,7 +31,13 @@ public class ExecutionService {
 
     public ExecutionHistoryResponse execute(String interfaceCode, boolean testExecution, String requestSummary) {
         InterfaceDefinitionEntity definition = interfaceService.getByCode(interfaceCode);
-        return doExecute(definition, testExecution ? ExecutionTriggerType.TEST : ExecutionTriggerType.MANUAL, false, requestSummary);
+        ExecutionTriggerType trigger = testExecution ? ExecutionTriggerType.TEST : ExecutionTriggerType.MANUAL;
+        return doExecute(definition, trigger, false, requestSummary);
+    }
+
+    public ExecutionHistoryResponse executeScheduled(String interfaceCode, String requestSummary) {
+        InterfaceDefinitionEntity definition = interfaceService.getByCode(interfaceCode);
+        return doExecute(definition, ExecutionTriggerType.SCHEDULED, false, requestSummary);
     }
 
     public ExecutionHistoryResponse reprocess(long failedHistoryId) {
@@ -56,6 +62,10 @@ public class ExecutionService {
             boolean reprocessed,
             String requestSummary
     ) {
+        if (!definition.isActive() && triggerType != ExecutionTriggerType.TEST) {
+            throw new IllegalArgumentException("비활성화된 인터페이스는 실행할 수 없습니다: " + definition.getInterfaceCode());
+        }
+
         ExecutionHistoryEntity history = new ExecutionHistoryEntity();
         history.setInterfaceCode(definition.getInterfaceCode());
         history.setTriggerType(triggerType);
@@ -63,14 +73,34 @@ public class ExecutionService {
         history.setStartedAt(LocalDateTime.now());
         history.setRequestSummary(requestSummary == null ? "" : requestSummary);
 
-        ExecutionResult result = executorRegistry.find(definition.getProtocolType())
-                .execute(definition, requestSummary, triggerType == ExecutionTriggerType.TEST);
+        int maxAttempts = triggerType == ExecutionTriggerType.TEST ? 1 : Math.max(1, definition.getRetryCount() + 1);
+        int attempts = 0;
+        ExecutionResult result = null;
+
+        for (int i = 1; i <= maxAttempts; i++) {
+            attempts = i;
+            result = executorRegistry.find(definition.getProtocolType())
+                    .execute(definition, requestSummary, triggerType == ExecutionTriggerType.TEST);
+            if (result.isSuccess()) {
+                break;
+            }
+        }
+
+        if (result == null) {
+            throw new IllegalStateException("실행 결과가 생성되지 않았습니다.");
+        }
+
+        String errorMessage = result.errorMessage();
+        if (!result.isSuccess() && errorMessage != null && !errorMessage.isBlank()) {
+            errorMessage = errorMessage + " (attempt " + attempts + "/" + maxAttempts + ")";
+        }
 
         history.complete(
                 LocalDateTime.now(),
                 result.executionStatus(),
                 result.processedCount(),
-                result.errorMessage(),
+                attempts,
+                errorMessage,
                 result.responseSummary()
         );
 
@@ -92,6 +122,7 @@ public class ExecutionService {
                 history.getEndedAt(),
                 history.getExecutionStatus(),
                 history.getProcessedCount(),
+                history.getAttemptCount(),
                 history.getErrorMessage(),
                 history.getRequestSummary(),
                 history.getResponseSummary()

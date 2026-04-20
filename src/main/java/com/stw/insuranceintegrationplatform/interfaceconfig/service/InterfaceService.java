@@ -2,8 +2,10 @@ package com.stw.insuranceintegrationplatform.interfaceconfig.service;
 
 import com.stw.insuranceintegrationplatform.interfaceconfig.entity.InterfaceDefinitionEntity;
 import com.stw.insuranceintegrationplatform.interfaceconfig.entity.InterfaceHealthStatus;
+import com.stw.insuranceintegrationplatform.interfaceconfig.entity.ProtocolType;
 import com.stw.insuranceintegrationplatform.interfaceconfig.presentation.InterfaceSummaryResponse;
 import com.stw.insuranceintegrationplatform.interfaceconfig.presentation.RegisterInterfaceRequest;
+import com.stw.insuranceintegrationplatform.interfaceconfig.presentation.UpdateInterfaceRequest;
 import com.stw.insuranceintegrationplatform.interfaceconfig.repository.InterfaceDefinitionRepository;
 import org.springframework.stereotype.Service;
 
@@ -32,18 +34,48 @@ public class InterfaceService {
         entity.setExecutionSchedule(request.executionSchedule());
         entity.setTimeoutSeconds(request.timeoutSeconds());
         entity.setRetryCount(request.retryCount());
-        entity.setActive(request.active());
-        entity.setHealthStatus(request.active() ? InterfaceHealthStatus.NORMAL : InterfaceHealthStatus.STOPPED);
+        entity.applyActivation(request.active());
         entity.setLastExecutionSuccess(false);
 
         InterfaceDefinitionEntity saved = interfaceRepository.save(entity);
         return toSummary(saved);
     }
 
+    public InterfaceSummaryResponse update(String interfaceCode, UpdateInterfaceRequest request) {
+        InterfaceDefinitionEntity entity = getByCode(interfaceCode);
+        entity.setInterfaceName(request.interfaceName());
+        entity.setTargetInstitution(request.targetInstitution());
+        entity.setProtocolType(request.protocolType());
+        entity.setDirectionType(request.directionType());
+        entity.setEndpointOrPath(request.endpointOrPath());
+        entity.setExecutionSchedule(request.executionSchedule());
+        entity.setTimeoutSeconds(request.timeoutSeconds());
+        entity.setRetryCount(request.retryCount());
+        entity.applyActivation(request.active());
+
+        if (!request.active()) {
+            entity.setNextScheduledAt(null);
+        }
+
+        return toSummary(interfaceRepository.save(entity));
+    }
+
     public List<InterfaceSummaryResponse> list() {
+        return list(null, null, null, null);
+    }
+
+    public List<InterfaceSummaryResponse> list(ProtocolType protocolType, String targetInstitution, InterfaceHealthStatus healthStatus, Boolean active) {
         return interfaceRepository.findAll().stream()
+                .filter(entity -> protocolType == null || entity.getProtocolType() == protocolType)
+                .filter(entity -> targetInstitution == null || entity.getTargetInstitution().contains(targetInstitution))
+                .filter(entity -> healthStatus == null || entity.getHealthStatus() == healthStatus)
+                .filter(entity -> active == null || entity.isActive() == active)
                 .map(this::toSummary)
                 .toList();
+    }
+
+    public List<InterfaceDefinitionEntity> listActiveEntities() {
+        return interfaceRepository.findByActiveTrue();
     }
 
     public InterfaceDefinitionEntity getByCode(String interfaceCode) {

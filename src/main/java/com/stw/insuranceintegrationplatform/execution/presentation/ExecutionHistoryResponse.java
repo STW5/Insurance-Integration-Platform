@@ -14,6 +14,7 @@ public record ExecutionHistoryResponse(
         LocalDateTime endedAt,
         ExecutionStatus executionStatus,
         int processedCount,
+        int attemptCount,
         String errorMessage,
         String requestSummary,
         String responseSummary

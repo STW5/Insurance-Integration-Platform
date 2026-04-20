@@ -57,3 +57,12 @@
 - 구조: 기능별 상위 모듈 + 모듈 내부 3-Layer
 - mock 범위: SOAP/MQ/SFTP/FTP 실행기는 시뮬레이션
 - 문서 운영: doc-lint + doc-gardening + decision-log 동기화
+
+
+## 추가 구현 (2026-04-20)
+- 인터페이스 수정 API 추가 (`PUT /api/interfaces/{interfaceCode}`)
+- 인터페이스 목록 필터 조회 추가 (`protocolType`, `targetInstitution`, `healthStatus`, `active`)
+- 실행 재시도 로직 구현 (retryCount 반영, attemptCount 이력 기록)
+- 스케줄 자동 실행기 추가 (`@Scheduled`, schedule format: manual/fixed:Nm/every-Nm/daily-HH:mm/cron:expr)
+- 스케줄 차기 실행 시각(`nextScheduledAt`) 관리
+- 비활성 인터페이스 수동/재처리 실행 차단

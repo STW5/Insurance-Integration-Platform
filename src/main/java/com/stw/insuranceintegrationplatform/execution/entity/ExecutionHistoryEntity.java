@@ -42,6 +42,9 @@ public class ExecutionHistoryEntity {
     @Column(name = "processed_count")
     private int processedCount;
 
+    @Column(name = "attempt_count")
+    private int attemptCount;
+
     @Column(name = "error_message", length = 2000)
     private String errorMessage;
 
@@ -58,12 +61,14 @@ public class ExecutionHistoryEntity {
             LocalDateTime endedAt,
             ExecutionStatus executionStatus,
             int processedCount,
+            int attemptCount,
             String errorMessage,
             String responseSummary
     ) {
         this.endedAt = endedAt;
         this.executionStatus = executionStatus;
         this.processedCount = processedCount;
+        this.attemptCount = attemptCount;
         this.errorMessage = errorMessage;
         this.responseSummary = responseSummary;
     }
@@ -84,6 +89,8 @@ public class ExecutionHistoryEntity {
     public void setExecutionStatus(ExecutionStatus executionStatus) { this.executionStatus = executionStatus; }
     public int getProcessedCount() { return processedCount; }
     public void setProcessedCount(int processedCount) { this.processedCount = processedCount; }
+    public int getAttemptCount() { return attemptCount; }
+    public void setAttemptCount(int attemptCount) { this.attemptCount = attemptCount; }
     public String getErrorMessage() { return errorMessage; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
     public String getRequestSummary() { return requestSummary; }
