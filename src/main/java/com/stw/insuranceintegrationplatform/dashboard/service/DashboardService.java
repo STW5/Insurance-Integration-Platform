@@ -2,6 +2,8 @@ package com.stw.insuranceintegrationplatform.dashboard.service;
 
 import com.stw.insuranceintegrationplatform.dashboard.presentation.DashboardPeriod;
 import com.stw.insuranceintegrationplatform.dashboard.presentation.DashboardResponse;
+import com.stw.insuranceintegrationplatform.dashboard.presentation.ProtocolExecutionStat;
+import com.stw.insuranceintegrationplatform.execution.entity.ExecutionStatus;
 import com.stw.insuranceintegrationplatform.execution.presentation.ExecutionHistoryResponse;
 import com.stw.insuranceintegrationplatform.execution.service.ExecutionService;
 import com.stw.insuranceintegrationplatform.interfaceconfig.entity.InterfaceHealthStatus;
@@ -27,11 +29,17 @@ public class DashboardService {
 
     public DashboardResponse getDashboard(DashboardPeriod period, LocalDateTime from, LocalDateTime to) {
         Range range = resolveRange(period, from, to);
+        var interfaceSummaries = interfaceService.list();
+        List<ExecutionHistoryResponse> histories = executionService.historiesBetween(range.from(), range.to());
+        Map<String, ProtocolType> protocolByCode = interfaceSummaries.stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        summary -> summary.interfaceCode(),
+                        summary -> summary.protocolType()
+                ));
 
-        Map<ProtocolType, Long> protocolMap = new EnumMap<>(ProtocolType.class);
-        interfaceService.list().forEach(summary -> protocolMap.merge(summary.protocolType(), 1L, Long::sum));
+        Map<ProtocolType, ProtocolExecutionStat> protocolMap = buildProtocolMap(histories, protocolByCode);
 
-        long failedInterfaceCount = interfaceService.list().stream()
+        long failedInterfaceCount = interfaceSummaries.stream()
                 .filter(summary -> summary.healthStatus() == InterfaceHealthStatus.FAILED)
                 .count();
 
@@ -48,6 +56,34 @@ public class DashboardService {
                 protocolMap,
                 failures
         );
+    }
+
+    private Map<ProtocolType, ProtocolExecutionStat> buildProtocolMap(
+            List<ExecutionHistoryResponse> histories,
+            Map<String, ProtocolType> protocolByCode
+    ) {
+        Map<ProtocolType, MutableProtocolStat> mutableMap = new EnumMap<>(ProtocolType.class);
+
+        histories.forEach(history -> {
+            ProtocolType protocolType = protocolByCode.get(history.interfaceCode());
+            if (protocolType == null) {
+                return;
+            }
+
+            MutableProtocolStat stat = mutableMap.computeIfAbsent(protocolType, k -> new MutableProtocolStat());
+            stat.total++;
+
+            if (history.executionStatus() == ExecutionStatus.SUCCESS) {
+                stat.success++;
+            } else if (history.executionStatus() == ExecutionStatus.FAILED) {
+                stat.failed++;
+            }
+        });
+
+        Map<ProtocolType, ProtocolExecutionStat> result = new EnumMap<>(ProtocolType.class);
+        mutableMap.forEach((protocol, stat) ->
+                result.put(protocol, new ProtocolExecutionStat(stat.total, stat.success, stat.failed)));
+        return result;
     }
 
     private Range resolveRange(DashboardPeriod period, LocalDateTime from, LocalDateTime to) {
@@ -70,5 +106,11 @@ public class DashboardService {
     }
 
     private record Range(LocalDateTime from, LocalDateTime to) {
+    }
+
+    private static class MutableProtocolStat {
+        private long total;
+        private long success;
+        private long failed;
     }
 }

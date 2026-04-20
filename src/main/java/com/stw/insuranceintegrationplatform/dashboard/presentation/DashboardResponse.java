@@ -15,7 +15,7 @@ public record DashboardResponse(
         long successCount,
         long failureCount,
         long failedInterfaceCount,
-        Map<ProtocolType, Long> protocolStatus,
+        Map<ProtocolType, ProtocolExecutionStat> protocolStatus,
         List<ExecutionHistoryResponse> recentFailures
 ) {
 }

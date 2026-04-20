@@ -146,6 +146,13 @@ public class ExecutionService {
                 .toList();
     }
 
+    public List<ExecutionHistoryResponse> historiesBetween(LocalDateTime from, LocalDateTime to) {
+        return historyRepository.findByStartedAtBetween(from, to)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private ExecutionHistoryResponse doExecute(
             InterfaceDefinitionEntity definition,
             ExecutionTriggerType triggerType,

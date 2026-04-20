@@ -2,6 +2,9 @@ package com.stw.insuranceintegrationplatform.dashboard.service;
 
 import com.stw.insuranceintegrationplatform.dashboard.presentation.DashboardPeriod;
 import com.stw.insuranceintegrationplatform.dashboard.presentation.DashboardResponse;
+import com.stw.insuranceintegrationplatform.execution.entity.ExecutionStatus;
+import com.stw.insuranceintegrationplatform.execution.entity.ExecutionTriggerType;
+import com.stw.insuranceintegrationplatform.execution.presentation.ExecutionHistoryResponse;
 import com.stw.insuranceintegrationplatform.execution.service.ExecutionService;
 import com.stw.insuranceintegrationplatform.interfaceconfig.entity.InterfaceHealthStatus;
 import com.stw.insuranceintegrationplatform.interfaceconfig.entity.ProtocolType;
@@ -38,6 +41,10 @@ class DashboardServiceTest {
         when(executionService.successBetween(any(), any())).thenReturn(1L);
         when(executionService.failureBetween(any(), any())).thenReturn(1L);
         when(executionService.recentFailuresBetween(any(), any(), any(Integer.class))).thenReturn(List.of());
+        when(executionService.historiesBetween(any(), any())).thenReturn(List.of(
+                history("IF-1", ExecutionStatus.SUCCESS),
+                history("IF-2", ExecutionStatus.FAILED)
+        ));
 
         when(interfaceService.list()).thenReturn(List.of(
                 new InterfaceSummaryResponse("IF-1", "name1", "기관1", ProtocolType.REST, InterfaceHealthStatus.NORMAL, null, true, true),
@@ -50,6 +57,8 @@ class DashboardServiceTest {
         assertEquals(2L, response.totalExecutions());
         assertEquals(1L, response.failedInterfaceCount());
         assertEquals(2, response.protocolStatus().size());
+        assertEquals(1L, response.protocolStatus().get(ProtocolType.REST).success());
+        assertEquals(1L, response.protocolStatus().get(ProtocolType.BATCH).failed());
     }
 
     @Test
@@ -64,6 +73,7 @@ class DashboardServiceTest {
         when(executionService.successBetween(any(), any())).thenReturn(0L);
         when(executionService.failureBetween(any(), any())).thenReturn(0L);
         when(executionService.recentFailuresBetween(any(), any(), any(Integer.class))).thenReturn(List.of());
+        when(executionService.historiesBetween(any(), any())).thenReturn(List.of());
         when(interfaceService.list()).thenReturn(List.of());
 
         LocalDateTime from = LocalDateTime.now().minusDays(2);
@@ -73,5 +83,22 @@ class DashboardServiceTest {
         assertEquals(DashboardPeriod.CUSTOM, response.period());
         assertEquals(from, response.from());
         assertEquals(to, response.to());
+    }
+
+    private ExecutionHistoryResponse history(String interfaceCode, ExecutionStatus status) {
+        return new ExecutionHistoryResponse(
+                1L,
+                interfaceCode,
+                ExecutionTriggerType.MANUAL,
+                false,
+                LocalDateTime.now(),
+                LocalDateTime.now(),
+                status,
+                1,
+                1,
+                null,
+                "request",
+                "response"
+        );
     }
 }
