@@ -75,3 +75,4 @@
 - 인터페이스 단건 조회 API 추가 (`GET /api/interfaces/{interfaceCode}`)
 - 대시보드 프로토콜별 현황을 실행건수 기준으로 확장 (total/success/failed)
 - 실패 이력 재처리 시 요청 요약 오버라이드 지원 (`POST /api/executions/histories/{historyId}/reprocess`)
+- 실행 이력 단건/재처리 API WebMvc 보안 테스트 추가 (ADMIN/OPERATOR 권한 검증)
