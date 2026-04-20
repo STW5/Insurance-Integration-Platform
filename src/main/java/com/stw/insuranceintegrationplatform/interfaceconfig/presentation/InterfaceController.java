@@ -47,4 +47,9 @@ public class InterfaceController {
     ) {
         return ResponseEntity.ok(interfaceService.list(protocolType, targetInstitution, healthStatus, active));
     }
+
+    @GetMapping("/{interfaceCode}")
+    public ResponseEntity<InterfaceSummaryResponse> get(@PathVariable String interfaceCode) {
+        return ResponseEntity.ok(interfaceService.get(interfaceCode));
+    }
 }

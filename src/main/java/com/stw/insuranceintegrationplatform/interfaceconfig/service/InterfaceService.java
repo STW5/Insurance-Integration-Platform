@@ -64,6 +64,10 @@ public class InterfaceService {
         return list(null, null, null, null);
     }
 
+    public InterfaceSummaryResponse get(String interfaceCode) {
+        return toSummary(getByCode(interfaceCode));
+    }
+
     public List<InterfaceSummaryResponse> list(ProtocolType protocolType, String targetInstitution, InterfaceHealthStatus healthStatus, Boolean active) {
         return interfaceRepository.findAll().stream()
                 .filter(entity -> protocolType == null || entity.getProtocolType() == protocolType)
