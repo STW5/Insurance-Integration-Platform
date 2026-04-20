@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -123,6 +124,33 @@ class ExecutionServiceTest {
 
         assertTrue(response.reprocessed());
         assertEquals("IF-BATCH-001", response.interfaceCode());
+    }
+
+    @Test
+    void shouldGetHistoryById() {
+        ExecutionHistoryEntity row = new ExecutionHistoryEntity();
+        row.setHistoryId(33L);
+        row.setInterfaceCode("IF-REST-033");
+        row.setExecutionStatus(ExecutionStatus.SUCCESS);
+        row.setStartedAt(LocalDateTime.now());
+        row.setAttemptCount(1);
+
+        when(executionHistoryRepository.findById(33L)).thenReturn(Optional.of(row));
+
+        ExecutionHistoryResponse result = executionService.getHistory(33L);
+
+        assertEquals(33L, result.historyId());
+        assertEquals("IF-REST-033", result.interfaceCode());
+    }
+
+    @Test
+    void shouldThrowWhenHistoryNotFound() {
+        when(executionHistoryRepository.findById(999L)).thenReturn(Optional.empty());
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> executionService.getHistory(999L));
+
+        assertTrue(ex.getMessage().contains("실행 이력을 찾을 수 없습니다"));
     }
 
 

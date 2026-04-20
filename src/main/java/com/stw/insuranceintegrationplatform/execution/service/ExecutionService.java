@@ -58,6 +58,12 @@ public class ExecutionService {
         return doExecute(definition, ExecutionTriggerType.REPROCESS, true, "재처리 from historyId=" + failedHistoryId);
     }
 
+    public ExecutionHistoryResponse getHistory(long historyId) {
+        ExecutionHistoryEntity history = historyRepository.findById(historyId)
+                .orElseThrow(() -> new IllegalArgumentException("실행 이력을 찾을 수 없습니다: " + historyId));
+        return toResponse(history);
+    }
+
     public List<ExecutionHistoryResponse> listHistories(boolean failuresOnly) {
         List<ExecutionHistoryEntity> source = failuresOnly
                 ? historyRepository.findByExecutionStatusOrderByStartedAtDesc(ExecutionStatus.FAILED)

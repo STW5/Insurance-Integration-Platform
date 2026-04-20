@@ -70,3 +70,5 @@
 - 실행 이력 조건 검색/기간 필터/페이지네이션 API 추가 (`GET /api/executions/histories`)
 
 - 인터페이스 중복 실행 방지 락 추가 (동일 interfaceCode 동시 실행 차단, 충돌 시 409)
+
+- 실행 이력 단건 조회 API 추가 (`GET /api/executions/histories/{historyId}`)

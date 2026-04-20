@@ -64,6 +64,11 @@ public class ExecutionController {
         ));
     }
 
+    @GetMapping("/histories/{historyId}")
+    public ResponseEntity<ExecutionHistoryResponse> history(@PathVariable long historyId) {
+        return ResponseEntity.ok(executionService.getHistory(historyId));
+    }
+
     @PostMapping("/histories/{historyId}/reprocess")
     public ResponseEntity<ExecutionHistoryResponse> reprocess(@PathVariable long historyId) {
         return ResponseEntity.ok(executionService.reprocess(historyId));
