@@ -13,7 +13,12 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
@@ -31,6 +36,27 @@ class ExecutionControllerWebMvcTest {
 
     @MockBean
     private ExecutionService executionService;
+
+    @Test
+    void shouldAllowOperatorToListHistoriesWithPaging() throws Exception {
+        when(executionService.searchHistories(any(), any(), nullable(String.class), any(), any(), any(), anyInt(), anyInt(), anyString(), any()))
+                .thenReturn(new ExecutionHistoryPageResponse(List.of(sample(1L)), 0, 20, 1L, 1, true));
+
+        mockMvc.perform(get("/api/executions/histories")
+                        .with(httpBasic("operator", "operator1234"))
+                        .param("page", "0")
+                        .param("size", "20")
+                        .param("failuresOnly", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].historyId").value(1))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void shouldRequireAuthenticationForHistoryList() throws Exception {
+        mockMvc.perform(get("/api/executions/histories"))
+                .andExpect(status().isUnauthorized());
+    }
 
     @Test
     void shouldAllowAdminToGetHistoryDetail() throws Exception {
@@ -62,6 +88,19 @@ class ExecutionControllerWebMvcTest {
                 .andExpect(jsonPath("$.historyId").value(8));
 
         verify(executionService).reprocess(7L, "manual-override");
+    }
+
+    @Test
+    void shouldApplyFailuresOnlyFilterAsFailedStatus() throws Exception {
+        when(executionService.searchHistories(any(), any(), nullable(String.class), any(), any(), any(), anyInt(), anyInt(), anyString(), any()))
+                .thenReturn(new ExecutionHistoryPageResponse(List.of(), 0, 20, 0L, 0, true));
+
+        mockMvc.perform(get("/api/executions/histories")
+                        .with(httpBasic("operator", "operator1234"))
+                        .param("failuresOnly", "true"))
+                .andExpect(status().isOk());
+
+        verify(executionService).searchHistories(any(), any(), nullable(String.class), org.mockito.ArgumentMatchers.eq(ExecutionStatus.FAILED), any(), any(), anyInt(), anyInt(), anyString(), any());
     }
 
     private ExecutionHistoryResponse sample(long id) {
