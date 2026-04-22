@@ -7,6 +7,7 @@ import com.stw.insuranceintegrationplatform.interfaceconfig.presentation.Interfa
 import com.stw.insuranceintegrationplatform.interfaceconfig.presentation.RegisterInterfaceRequest;
 import com.stw.insuranceintegrationplatform.interfaceconfig.presentation.UpdateInterfaceRequest;
 import com.stw.insuranceintegrationplatform.interfaceconfig.repository.InterfaceDefinitionRepository;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -69,11 +70,23 @@ public class InterfaceService {
     }
 
     public List<InterfaceSummaryResponse> list(ProtocolType protocolType, String targetInstitution, InterfaceHealthStatus healthStatus, Boolean active) {
-        return interfaceRepository.findAll().stream()
-                .filter(entity -> protocolType == null || entity.getProtocolType() == protocolType)
-                .filter(entity -> targetInstitution == null || entity.getTargetInstitution().contains(targetInstitution))
-                .filter(entity -> healthStatus == null || entity.getHealthStatus() == healthStatus)
-                .filter(entity -> active == null || entity.isActive() == active)
+        Specification<InterfaceDefinitionEntity> spec = Specification.unrestricted();
+
+        if (protocolType != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("protocolType"), protocolType));
+        }
+        if (targetInstitution != null && !targetInstitution.isBlank()) {
+            String keyword = "%" + targetInstitution.trim().toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("targetInstitution")), keyword));
+        }
+        if (healthStatus != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("healthStatus"), healthStatus));
+        }
+        if (active != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("active"), active));
+        }
+
+        return interfaceRepository.findAll(spec).stream()
                 .map(this::toSummary)
                 .toList();
     }

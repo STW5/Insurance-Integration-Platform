@@ -11,11 +11,15 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.jpa.domain.Specification;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -51,6 +55,28 @@ class InterfaceServiceTest {
                 () -> interfaceService.get("NOT-FOUND"));
 
         assertEquals("인터페이스를 찾을 수 없습니다: NOT-FOUND", ex.getMessage());
+    }
+
+    @Test
+    void shouldListWithDbSpecificationFiltering() {
+        InterfaceDefinitionEntity entity = sample("IF-REST-010");
+        entity.setProtocolType(ProtocolType.REST);
+        entity.setHealthStatus(InterfaceHealthStatus.NORMAL);
+        entity.setTargetInstitution("금감원");
+        entity.applyActivation(true);
+
+        when(interfaceRepository.findAll(any(Specification.class))).thenReturn(List.of(entity));
+
+        List<InterfaceSummaryResponse> result = interfaceService.list(
+                ProtocolType.REST,
+                "금감",
+                InterfaceHealthStatus.NORMAL,
+                true
+        );
+
+        assertEquals(1, result.size());
+        assertEquals("IF-REST-010", result.getFirst().interfaceCode());
+        verify(interfaceRepository).findAll(any(Specification.class));
     }
 
     private InterfaceDefinitionEntity sample(String code) {
