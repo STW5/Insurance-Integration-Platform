@@ -3,9 +3,8 @@ package com.stw.insuranceintegrationplatform.dashboard.service;
 import com.stw.insuranceintegrationplatform.dashboard.presentation.DashboardPeriod;
 import com.stw.insuranceintegrationplatform.dashboard.presentation.DashboardResponse;
 import com.stw.insuranceintegrationplatform.execution.entity.ExecutionStatus;
-import com.stw.insuranceintegrationplatform.execution.entity.ExecutionTriggerType;
-import com.stw.insuranceintegrationplatform.execution.presentation.ExecutionHistoryResponse;
 import com.stw.insuranceintegrationplatform.execution.service.ExecutionService;
+import com.stw.insuranceintegrationplatform.execution.service.InterfaceExecutionCount;
 import com.stw.insuranceintegrationplatform.interfaceconfig.entity.InterfaceHealthStatus;
 import com.stw.insuranceintegrationplatform.interfaceconfig.entity.ProtocolType;
 import com.stw.insuranceintegrationplatform.interfaceconfig.presentation.InterfaceSummaryResponse;
@@ -41,9 +40,9 @@ class DashboardServiceTest {
         when(executionService.successBetween(any(), any())).thenReturn(1L);
         when(executionService.failureBetween(any(), any())).thenReturn(1L);
         when(executionService.recentFailuresBetween(any(), any(), any(Integer.class))).thenReturn(List.of());
-        when(executionService.historiesBetween(any(), any())).thenReturn(List.of(
-                history("IF-1", ExecutionStatus.SUCCESS),
-                history("IF-2", ExecutionStatus.FAILED)
+        when(executionService.groupedCountsBetween(any(), any())).thenReturn(List.of(
+                groupedCount("IF-1", ExecutionStatus.SUCCESS, 1L),
+                groupedCount("IF-2", ExecutionStatus.FAILED, 1L)
         ));
 
         when(interfaceService.list()).thenReturn(List.of(
@@ -73,7 +72,7 @@ class DashboardServiceTest {
         when(executionService.successBetween(any(), any())).thenReturn(0L);
         when(executionService.failureBetween(any(), any())).thenReturn(0L);
         when(executionService.recentFailuresBetween(any(), any(), any(Integer.class))).thenReturn(List.of());
-        when(executionService.historiesBetween(any(), any())).thenReturn(List.of());
+        when(executionService.groupedCountsBetween(any(), any())).thenReturn(List.of());
         when(interfaceService.list()).thenReturn(List.of());
 
         LocalDateTime from = LocalDateTime.now().minusDays(2);
@@ -85,20 +84,7 @@ class DashboardServiceTest {
         assertEquals(to, response.to());
     }
 
-    private ExecutionHistoryResponse history(String interfaceCode, ExecutionStatus status) {
-        return new ExecutionHistoryResponse(
-                1L,
-                interfaceCode,
-                ExecutionTriggerType.MANUAL,
-                false,
-                LocalDateTime.now(),
-                LocalDateTime.now(),
-                status,
-                1,
-                1,
-                null,
-                "request",
-                "response"
-        );
+    private InterfaceExecutionCount groupedCount(String interfaceCode, ExecutionStatus status, long count) {
+        return new InterfaceExecutionCount(interfaceCode, status, count);
     }
 }

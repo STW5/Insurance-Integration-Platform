@@ -3,9 +3,9 @@ package com.stw.insuranceintegrationplatform.dashboard.service;
 import com.stw.insuranceintegrationplatform.dashboard.presentation.DashboardPeriod;
 import com.stw.insuranceintegrationplatform.dashboard.presentation.DashboardResponse;
 import com.stw.insuranceintegrationplatform.dashboard.presentation.ProtocolExecutionStat;
-import com.stw.insuranceintegrationplatform.execution.entity.ExecutionStatus;
 import com.stw.insuranceintegrationplatform.execution.presentation.ExecutionHistoryResponse;
 import com.stw.insuranceintegrationplatform.execution.service.ExecutionService;
+import com.stw.insuranceintegrationplatform.execution.service.InterfaceExecutionCount;
 import com.stw.insuranceintegrationplatform.interfaceconfig.entity.InterfaceHealthStatus;
 import com.stw.insuranceintegrationplatform.interfaceconfig.entity.ProtocolType;
 import com.stw.insuranceintegrationplatform.interfaceconfig.service.InterfaceService;
@@ -30,14 +30,14 @@ public class DashboardService {
     public DashboardResponse getDashboard(DashboardPeriod period, LocalDateTime from, LocalDateTime to) {
         Range range = resolveRange(period, from, to);
         var interfaceSummaries = interfaceService.list();
-        List<ExecutionHistoryResponse> histories = executionService.historiesBetween(range.from(), range.to());
+        List<InterfaceExecutionCount> groupedCounts = executionService.groupedCountsBetween(range.from(), range.to());
         Map<String, ProtocolType> protocolByCode = interfaceSummaries.stream()
                 .collect(java.util.stream.Collectors.toMap(
                         summary -> summary.interfaceCode(),
                         summary -> summary.protocolType()
                 ));
 
-        Map<ProtocolType, ProtocolExecutionStat> protocolMap = buildProtocolMap(histories, protocolByCode);
+        Map<ProtocolType, ProtocolExecutionStat> protocolMap = buildProtocolMap(groupedCounts, protocolByCode);
 
         long failedInterfaceCount = interfaceSummaries.stream()
                 .filter(summary -> summary.healthStatus() == InterfaceHealthStatus.FAILED)
@@ -59,24 +59,25 @@ public class DashboardService {
     }
 
     private Map<ProtocolType, ProtocolExecutionStat> buildProtocolMap(
-            List<ExecutionHistoryResponse> histories,
+            List<InterfaceExecutionCount> groupedCounts,
             Map<String, ProtocolType> protocolByCode
     ) {
         Map<ProtocolType, MutableProtocolStat> mutableMap = new EnumMap<>(ProtocolType.class);
 
-        histories.forEach(history -> {
-            ProtocolType protocolType = protocolByCode.get(history.interfaceCode());
+        groupedCounts.forEach(groupedCount -> {
+            ProtocolType protocolType = protocolByCode.get(groupedCount.interfaceCode());
             if (protocolType == null) {
                 return;
             }
 
             MutableProtocolStat stat = mutableMap.computeIfAbsent(protocolType, k -> new MutableProtocolStat());
-            stat.total++;
+            stat.total += groupedCount.totalCount();
 
-            if (history.executionStatus() == ExecutionStatus.SUCCESS) {
-                stat.success++;
-            } else if (history.executionStatus() == ExecutionStatus.FAILED) {
-                stat.failed++;
+            switch (groupedCount.executionStatus()) {
+                case SUCCESS -> stat.success += groupedCount.totalCount();
+                case FAILED -> stat.failed += groupedCount.totalCount();
+                default -> {
+                }
             }
         });
 

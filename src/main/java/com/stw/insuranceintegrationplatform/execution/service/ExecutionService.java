@@ -154,6 +154,17 @@ public class ExecutionService {
                 .toList();
     }
 
+    public List<InterfaceExecutionCount> groupedCountsBetween(LocalDateTime from, LocalDateTime to) {
+        return historyRepository.countGroupedByInterfaceAndStatus(from, to)
+                .stream()
+                .map(row -> new InterfaceExecutionCount(
+                        row.getInterfaceCode(),
+                        row.getExecutionStatus(),
+                        row.getTotalCount()
+                ))
+                .toList();
+    }
+
     private ExecutionHistoryResponse doExecute(
             InterfaceDefinitionEntity definition,
             ExecutionTriggerType triggerType,

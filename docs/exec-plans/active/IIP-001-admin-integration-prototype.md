@@ -76,3 +76,4 @@
 - 대시보드 프로토콜별 현황을 실행건수 기준으로 확장 (total/success/failed)
 - 실패 이력 재처리 시 요청 요약 오버라이드 지원 (`POST /api/executions/histories/{historyId}/reprocess`)
 - 실행 이력 단건/재처리 API WebMvc 보안 테스트 추가 (ADMIN/OPERATOR 권한 검증)
+- 대시보드 프로토콜 통계를 메모리 전체 스캔에서 DB 그룹 집계 기반으로 최적화
