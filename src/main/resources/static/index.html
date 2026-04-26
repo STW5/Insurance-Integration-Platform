@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>보험 인터페이스 통합관제</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="container">
+  <header class="header">
+    <h1>보험사 금융 IT 인터페이스 통합관제</h1>
+    <p id="statusMessage">초기화 중...</p>
+  </header>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>대시보드</h2>
+      <div class="row gap-8">
+        <select id="dashboardPeriod">
+          <option value="TODAY">오늘</option>
+          <option value="DAYS_7">최근 7일</option>
+          <option value="DAYS_30">최근 30일</option>
+          <option value="CUSTOM">직접 지정</option>
+        </select>
+        <input id="dashboardFrom" type="datetime-local" />
+        <input id="dashboardTo" type="datetime-local" />
+        <button id="reloadDashboardBtn">조회</button>
+      </div>
+    </div>
+
+    <div class="cards" id="summaryCards"></div>
+
+    <div class="grid-2">
+      <div>
+        <h3>프로토콜별 실행 현황</h3>
+        <table>
+          <thead>
+          <tr>
+            <th>프로토콜</th>
+            <th>총건</th>
+            <th>성공</th>
+            <th>실패</th>
+          </tr>
+          </thead>
+          <tbody id="protocolTableBody"></tbody>
+        </table>
+      </div>
+      <div>
+        <h3>최근 실패</h3>
+        <table>
+          <thead>
+          <tr>
+            <th>이력 ID</th>
+            <th>인터페이스</th>
+            <th>시작 시각</th>
+            <th>에러</th>
+          </tr>
+          </thead>
+          <tbody id="recentFailureBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>인터페이스 목록</h2>
+      <div class="row gap-8 wrap">
+        <select id="filterProtocol">
+          <option value="">전체 프로토콜</option>
+          <option value="REST">REST</option>
+          <option value="SOAP">SOAP</option>
+          <option value="MQ">MQ</option>
+          <option value="BATCH">BATCH</option>
+          <option value="SFTP">SFTP</option>
+          <option value="FTP">FTP</option>
+        </select>
+        <input id="filterInstitution" type="text" placeholder="대상 기관" />
+        <select id="filterHealth">
+          <option value="">전체 상태</option>
+          <option value="NORMAL">정상</option>
+          <option value="FAILED">실패</option>
+          <option value="STOPPED">중지</option>
+        </select>
+        <select id="filterActive">
+          <option value="">활성 전체</option>
+          <option value="true">활성</option>
+          <option value="false">비활성</option>
+        </select>
+        <button id="reloadInterfacesBtn">조회</button>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+      <tr>
+        <th>코드</th>
+        <th>이름</th>
+        <th>기관</th>
+        <th>프로토콜</th>
+        <th>상태</th>
+        <th>활성</th>
+        <th>마지막 실행</th>
+        <th>액션</th>
+      </tr>
+      </thead>
+      <tbody id="interfaceTableBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>실행 이력</h2>
+      <div class="row gap-8 wrap">
+        <input id="historyInterfaceCode" type="text" placeholder="인터페이스 코드" />
+        <select id="historyStatus">
+          <option value="">전체 상태</option>
+          <option value="SUCCESS">성공</option>
+          <option value="FAILED">실패</option>
+        </select>
+        <select id="historyTriggerType">
+          <option value="">전체 트리거</option>
+          <option value="MANUAL">MANUAL</option>
+          <option value="TEST">TEST</option>
+          <option value="SCHEDULED">SCHEDULED</option>
+          <option value="REPROCESS">REPROCESS</option>
+        </select>
+        <label><input id="historyFailuresOnly" type="checkbox" /> 실패만</label>
+        <button id="reloadHistoriesBtn">조회</button>
+      </div>
+    </div>
+
+    <table>
+      <thead>
+      <tr>
+        <th>ID</th>
+        <th>인터페이스</th>
+        <th>트리거</th>
+        <th>시작</th>
+        <th>종료</th>
+        <th>상태</th>
+        <th>시도</th>
+        <th>에러</th>
+        <th>액션</th>
+      </tr>
+      </thead>
+      <tbody id="historyTableBody"></tbody>
+    </table>
+
+    <div class="row gap-8">
+      <button id="prevPageBtn">이전</button>
+      <span id="paginationText">0 / 0</span>
+      <button id="nextPageBtn">다음</button>
+    </div>
+  </section>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
