@@ -1,0 +1,9 @@
+.git
+.gitignore
+.gradle
+.idea
+build
+out
+.omx
+*.iml
+**/.DS_Store
